@@ -37,7 +37,7 @@ def createWindow(title, contents):
     window.add(contents)
     return window
 
-def layeredWindow(title, contents, anchors="", margins="tlbr", layer=GtkLayerShell.Layer.TOP, exclusive=False):
+def layeredWindow(title, contents, anchors="", margins="tlbr", layer=GtkLayerShell.Layer.TOP, exclusive=False, monitor=None):
     window = createWindow(title, contents)
     makeLayer(window)
 
@@ -59,5 +59,9 @@ def layeredWindow(title, contents, anchors="", margins="tlbr", layer=GtkLayerShe
 
     # set layer
     GtkLayerShell.set_layer(window, layer)
+
+    # set monitor
+    if monitor != None:
+        GtkLayerShell.set_monitor(window, monitor)
 
     return window
