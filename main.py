@@ -5,8 +5,7 @@
 import gi
 import helpers
 import time
-import subprocess
-import json
+import os
 
 gi.require_version('Gtk', '3.0')
 gi.require_version('GtkLayerShell', '0.1')
@@ -15,18 +14,21 @@ from gi.repository import Gtk, GtkLayerShell, GLib, Gdk
 
 # === WIDGETS ===
 
+def seperator():
+    return Gtk.Label(justify=Gtk.Justification.CENTER, label="-")
+
 def timeBtn(onclick):
     btn = Gtk.Button()
+    btn.connect("clicked", onclick)
     
     def updateTime():
         theTime = time.localtime(time.time())
-        btn.set_label(str(theTime.tm_hour).zfill(2) + "\n" + str(theTime.tm_min).zfill(2))
+        btn.set_label(str(theTime.tm_hour%12).zfill(2) + "\n" + str(theTime.tm_min).zfill(2))
         return True
     
     updateTime()
     GLib.timeout_add(15*1000, updateTime)
 
-    btn.connect("clicked", onclick)
     return btn
 
 def hoverRevealer(icon, progress, onChange):
@@ -34,48 +36,67 @@ def hoverRevealer(icon, progress, onChange):
     revealer = Gtk.Revealer()
     revealer.set_reveal_child(Gtk.Label(label="hi"))
 
-def resoarcesWidget(onclick):
-    text = Gtk.Label()
-    Gtk.Label.set_justify(text, Gtk.Justification.CENTER)
+def batteryProgress():
+    progress = Gtk.ProgressBar(
+            orientation=Gtk.Orientation.VERTICAL,
+            halign=Gtk.Align.CENTER,
+            inverted=True
+    )
 
-    labelText = ""
+    def updateProgress():
+        Gtk.ProgressBar.set_fraction(progress, int(os.popen("cat /sys/class/power_supply/BAT0/capacity").read().strip())/100)
+        return True
 
-    # battery
-    labelText += "🔋"
-    #labelText += subprocess.check_output("cat /sys/class/power_supply/BAT0/capacity", shell=True)
-    labelText += "\n"
+    updateProgress()
+    GLib.timeout_add(30*1000, updateProgress)
+    
+    return progress
 
-    # cpu usage
-    labelText += "C"
-    labelText += "\n"
+def batteryText():
+    text = Gtk.Label(justify=Gtk.Justification.CENTER);
 
-    # memory usage
-    labelText += "M"
+    def setText():
+        batStatus = os.popen("cat /sys/class/power_supply/BAT0/status").read()
+        if batStatus == "Charging\n":
+            text.set_label("🔋↑")
+        elif batStatus == "Full\n" or batStatus == "Not charging\n":
+            text.set_label("🔋○")
+        else:
+            text.set_label("🔋↓")
+        return True
 
-    text.set_label(labelText)
+    setText()
+    GLib.timeout_add(1*1000, setText)
+
     return text
 
 def workspacesWidget(monitorId):
-    text = Gtk.Label()
-    Gtk.Label.set_justify(text, Gtk.Justification.CENTER)
-    def updateWorkspaces():
-        monitors = json.loads(subprocess.check_output(["hyprctl", "monitors", "-j"]))
-        workspaces = json.loads(subprocess.check_output(["hyprctl", "workspaces", "-j"]))
-        workspacesText = ""
-        for monitor in monitors: # loop through monitors
-            if monitor["id"] == monitorId: # if monitor is the one we want
-                for workspace in workspaces: # then loop through workspaces
-                    if workspace["monitor"] == monitor["name"]: # and if the workspace is on the monitor
-                        # add it to the text
-                        isActive = (monitor["activeWorkspace"]["id"] == workspace["id"])
-                        if isActive:
-                            workspacesText += "❱"
-                        workspacesText += workspace["name"]
-                        if isActive:
-                            workspacesText += "❰"
-                        workspacesText += "\n"
+    text = Gtk.Label(justify=Gtk.Justification.CENTER);
 
-        text.set_label(workspacesText)
+    def updateWorkspaces():
+        monitors = helpers.getMonitors()
+        workspaces = helpers.getWorkspaces()
+
+        if workspaces != []: # if we got workspaces information
+            workspacesText = ""
+            if monitors != []: # if we got monitors information
+                for monitor in monitors: # loop through monitors
+                    if monitor["id"] == monitorId: # if monitor is the one we want
+                        for workspace in workspaces: # then loop through workspaces
+                            if workspace["monitor"] == monitor["name"]: # and if the workspace is on the monitor
+                                # add it to the text
+                                isActive = (monitor["activeWorkspace"]["id"] == workspace["id"])
+                                if isActive:
+                                    workspacesText += "❱"
+                                workspacesText += workspace["name"]
+                                if isActive:
+                                    workspacesText += "❰"
+                                workspacesText += "\n"
+            else:
+                for workspace in workspaces:
+                    workspacesText += workspace["name"]
+                    workspacesText += "\n"
+            text.set_label(workspacesText) # set the text of the workspaces widget
 
         return True
     
@@ -86,21 +107,34 @@ def workspacesWidget(monitorId):
 
 # === WINDOWS ===
 
+def datemenu():
+    calendar = Gtk.Calendar()
+    return calendar
+
 launcher   = helpers.layeredWindow("launcher", Gtk.Label(label="Launcher!")) # TODO
 background = helpers.layeredWindow("background", Gtk.Label(label="Background!"), "tlbr", "", GtkLayerShell.Layer.BACKGROUND) # TODO
-datemenu   = helpers.layeredWindow("datemenu", Gtk.Calendar(), "bl", "bl")
+datemenu   = helpers.layeredWindow("datemenu", datemenu(), "br", "br")
 
 def makeBar(monitor, monitorId):
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
-    helpers.addClass(box, "bar-box")
+    # search button
     searchBtn = Gtk.Button(label="⌥")
     searchBtn.connect("clicked", lambda _: helpers.toggleWindow(launcher))
     helpers.addClass(searchBtn, "search")
-    box.set_center_widget(workspacesWidget(monitorId))
-    box.pack_start(searchBtn, False, True, 0)
-    box.pack_end(timeBtn(lambda _: helpers.toggleWindow(datemenu)), False, True, 0)
-    #box.pack_end(resoarcesWidget(None), False, True, 0)
-    return helpers.layeredWindow("bar", box, "tlb", "tlb", GtkLayerShell.Layer.TOP, True, monitor)
+
+    box = helpers.newBox(
+        Gtk.Orientation.VERTICAL,
+        1,
+        ["bar"],
+        [searchBtn],
+        workspacesWidget(monitorId),
+        [
+            timeBtn(lambda _: helpers.toggleWindow(datemenu)),
+            seperator(),
+            batteryText(),
+            batteryProgress()
+        ]
+    )
+    return helpers.layeredWindow("bar", box, "trb", "", GtkLayerShell.Layer.TOP, True, monitor)
 
 bars = []
 
@@ -119,8 +153,8 @@ def generateBars():
     for monitorNumber in range(Gdk.Display.get_n_monitors(display)): # loop through monitors
         newBar(Gdk.Display.get_monitor(display, monitorNumber), monitorNumber) # and create a bar for them
 
-display.connect("monitor-added", lambda _, _2: generateBars())
-display.connect("monitor-removed", lambda _, _2: generateBars())
+display.connect("monitor-added", lambda arg1, arg2: generateBars())
+display.connect("monitor-removed", lambda arg1, arg2: generateBars())
 
 generateBars()
 

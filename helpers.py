@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # === IMPORTS ===
 
 import gi
@@ -8,38 +6,88 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('GtkLayerShell', '0.1')
 
 from gi.repository import Gtk, Gdk, GtkLayerShell
- 
+
+# === HELPERS FOR HYPRCTRL ===
+
+def getMonitors():
+    """Attempts to get a list containing maps of monitor information from hyprctl."""
+    try:
+        return json.loads(subprocess.check_output(["hyprctl", "monitors", "-j"]))
+    except:
+        return [
+            #{
+            #    "id": "1",
+            #    "name": "1",
+            #    "activeWorkspace": {
+            #        "id": "1"
+            #    }
+            #}
+        ]
+
+def getWorkspaces():
+    """Attempts to get a list containing maps of workspace information from hyprctl."""
+    try:
+        return json.loads(subprocess.check_output(["hyprctl", "workspaces", "-j"]))
+    except:
+        return [
+            {
+                "name": "test",
+                "monitor": "1",
+                "id": "1",
+            }
+        ]
+
 # === HELPERS FOR GTK ===
 
-def makeLayer(window):
-    GtkLayerShell.init_for_window(window)
+def newWindow(title, contents):
+    """Creates a gtk window."""
+    window = Gtk.Window()
+    window.set_title(title)
+    window.add(contents)
+    return window
 
 def addClass(widget, cssClass):
-    context = widget.get_style_context()
-    context.add_class(cssClass)
+    """Adds a class to a widget."""
+    widget.get_style_context().add_class(cssClass)
+
 
 def toggleWindow(window):
+    """Toggles the visibility for a window"""
     if window.props.visible:
         window.hide()
     else:
         window.show_all()
 
+def newBox(orientation, spacing, classes, startWidgets, centerWidget, endWidgets):
+    """Creates a gtk box widget."""
+    box = Gtk.Box(orientation=orientation, spacing=spacing)
+    for boxClass in classes:
+        addClass(box, boxClass)
+    for startWidget in startWidgets:
+        box.pack_start(startWidget, False, False, 0)
+    for endWidget in endWidgets:
+        box.pack_end(endWidget, False, False, 0)
+    box.set_center_widget(centerWidget)
+    return box
+
 def setStylesheet(file):
+    """Sets the stylesheet for your gtk application."""
     cssProvider = Gtk.CssProvider()
     cssProvider.load_from_path(file)
     screen = Gdk.Screen.get_default()
     styleContext = Gtk.StyleContext()
     styleContext.add_provider_for_screen(screen, cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER) # With the others GTK_STYLE_PROVIDER_PRIORITY values get the same result.
 
-def createWindow(title, contents):
-    window = Gtk.Window()
-    window.set_title(title)
-    window.add(contents)
-    return window
+# === HELPERS FOR GTK LAYER SHELL ===
+
+def windowToLayer(window):
+    """Initialises GtkLayerShell for a window."""
+    GtkLayerShell.init_for_window(window)
 
 def layeredWindow(title, contents, anchors="", margins="tlbr", layer=GtkLayerShell.Layer.TOP, exclusive=False, monitor=None):
-    window = createWindow(title, contents)
-    makeLayer(window)
+    """Creates a window that is a GtkLayerShell layer."""
+    window = newWindow(title, contents)
+    windowToLayer(window)
 
     # set anchors
     GtkLayerShell.set_anchor(window, GtkLayerShell.Edge.BOTTOM, 1 if anchors.__contains__("b") else 0)
@@ -65,3 +113,4 @@ def layeredWindow(title, contents, anchors="", margins="tlbr", layer=GtkLayerShe
         GtkLayerShell.set_monitor(window, monitor)
 
     return window
+

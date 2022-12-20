@@ -1,17 +1,17 @@
 * {
-  all: unset; /*Unsets everything so you can style everything from scratch*/
+	all: unset; /*Unsets everything so you can style everything from scratch*/
 }
 
 window {
-				background-color: rgba(46,52,64,0.7);
-				color: #FFFFFF;
-				padding: 5px;
-				border-radius: 10px;
+	background-color: rgba(46,52,64,0.9);
+	color: #FFFFFF;
+	padding: 5px;
+	border-radius: 10px;
 }
 
-.bar-box {
-				font-weight: bold;
-				padding: 5px 0;
+.bar {
+	font-weight: bold;
+	padding: 5px 0;
 }
 
 calendar {
@@ -19,11 +19,11 @@ calendar {
 }
 
 calendar:selected {
-		background-color: #8fbcbb;
-		color: #000000;
+	background-color: #8fbcbb;
+	color: #000000;
 }
 
 calendar > * {
-    border-radius: 50px;
+	border-radius: 50px;
 }
 
