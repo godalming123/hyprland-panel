@@ -3,9 +3,9 @@
 # === IMPORTS ===
 
 import gi
-import helpers
 import time
-import os
+
+import helpers
 
 gi.require_version('Gtk', '3.0')
 gi.require_version('GtkLayerShell', '0.1')
@@ -26,49 +26,40 @@ def timeBtn(onclick):
         btn.set_label(str(theTime.tm_hour%12).zfill(2) + "\n" + str(theTime.tm_min).zfill(2))
         return True
     
-    updateTime()
-    GLib.timeout_add(15*1000, updateTime)
+    if updateTime():
+        GLib.timeout_add(15*1000, updateTime)
+        return btn
 
-    return btn
+# def hoverRevealer(icon, progress, onChange):
+#     # === TODO ===
+#     revealer = Gtk.Revealer()
+#     revealer.set_reveal_child(Gtk.Label(label="hi"))
 
-def hoverRevealer(icon, progress, onChange):
-    # === TODO ===
-    revealer = Gtk.Revealer()
-    revealer.set_reveal_child(Gtk.Label(label="hi"))
-
-def batteryProgress():
+def batteryInformation():
     progress = Gtk.ProgressBar(
-            orientation=Gtk.Orientation.VERTICAL,
-            halign=Gtk.Align.CENTER,
-            inverted=True
+        orientation=Gtk.Orientation.VERTICAL,
+        halign=Gtk.Align.CENTER,
+        inverted=True
     )
-
-    def updateProgress():
-        Gtk.ProgressBar.set_fraction(progress, int(os.popen("cat /sys/class/power_supply/BAT0/capacity").read().strip())/100)
-        return True
-
-    updateProgress()
-    GLib.timeout_add(30*1000, updateProgress)
-    
-    return progress
-
-def batteryText():
     text = Gtk.Label(justify=Gtk.Justification.CENTER);
 
-    def setText():
-        batStatus = os.popen("cat /sys/class/power_supply/BAT0/status").read()
-        if batStatus == "Charging\n":
-            text.set_label("🔋↑")
-        elif batStatus == "Full\n" or batStatus == "Not charging\n":
-            text.set_label("🔋○")
-        else:
-            text.set_label("🔋↓")
-        return True
+    def updateInfo():
+        batInfo = helpers.getBattery()
+        if not batInfo["error"]:
+            Gtk.ProgressBar.set_fraction(progress, batInfo["charge"])
 
-    setText()
-    GLib.timeout_add(1*1000, setText)
+            if batInfo == "Charging\n":
+                text.set_label("🔋↑")
+            elif batInfo == "Full\n" or batInfo == "Not charging\n":
+                text.set_label("🔋○")
+            else:
+                text.set_label("🔋↓")
 
-    return text
+            return True
+
+    if updateInfo():
+        GLib.timeout_add(30*1000, updateInfo)
+        return progress, text
 
 def workspacesWidget(monitorId):
     text = Gtk.Label(justify=Gtk.Justification.CENTER);
@@ -97,23 +88,17 @@ def workspacesWidget(monitorId):
                     workspacesText += workspace["name"]
                     workspacesText += "\n"
             text.set_label(workspacesText) # set the text of the workspaces widget
-
-        return True
+            return True
     
-    updateWorkspaces()
-    GLib.timeout_add(250, updateWorkspaces)
-
-    return text
+    if updateWorkspaces():
+        GLib.timeout_add(250, updateWorkspaces)
+        return text
 
 # === WINDOWS ===
 
-def datemenu():
-    calendar = Gtk.Calendar()
-    return calendar
-
 launcher   = helpers.layeredWindow("launcher", Gtk.Label(label="Launcher!")) # TODO
 background = helpers.layeredWindow("background", Gtk.Label(label="Background!"), "tlbr", "", GtkLayerShell.Layer.BACKGROUND) # TODO
-datemenu   = helpers.layeredWindow("datemenu", datemenu(), "br", "br")
+datemenu   = helpers.layeredWindow("datemenu", Gtk.Calendar(), "br", "br")
 
 def makeBar(monitor, monitorId):
     # search button
@@ -121,18 +106,16 @@ def makeBar(monitor, monitorId):
     searchBtn.connect("clicked", lambda _: helpers.toggleWindow(launcher))
     helpers.addClass(searchBtn, "search")
 
+    # battery information
+    batteryStatus = batteryInformation();
+
     box = helpers.newBox(
         Gtk.Orientation.VERTICAL,
         1,
         ["bar"],
         [searchBtn],
         workspacesWidget(monitorId),
-        [
-            timeBtn(lambda _: helpers.toggleWindow(datemenu)),
-            seperator(),
-            batteryText(),
-            batteryProgress()
-        ]
+        [timeBtn(lambda _: helpers.toggleWindow(datemenu))] + [batteryStatus[0], batteryStatus[1]] if batteryStatus else []
     )
     return helpers.layeredWindow("bar", box, "trb", "", GtkLayerShell.Layer.TOP, True, monitor)
 
@@ -153,8 +136,8 @@ def generateBars():
     for monitorNumber in range(Gdk.Display.get_n_monitors(display)): # loop through monitors
         newBar(Gdk.Display.get_monitor(display, monitorNumber), monitorNumber) # and create a bar for them
 
-display.connect("monitor-added", lambda arg1, arg2: generateBars())
-display.connect("monitor-removed", lambda arg1, arg2: generateBars())
+display.connect("monitor-added", lambda _, _2: generateBars())
+display.connect("monitor-removed", lambda _, _2: generateBars())
 
 generateBars()
 

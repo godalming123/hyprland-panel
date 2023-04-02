@@ -1,11 +1,28 @@
 # === IMPORTS ===
 
 import gi
+import json
+import os
+import subprocess
 
 gi.require_version('Gtk', '3.0')
 gi.require_version('GtkLayerShell', '0.1')
 
 from gi.repository import Gtk, Gdk, GtkLayerShell
+
+# === HELPERS FOR SYSTEM STUFF ===
+
+def getBattery():
+    """Attempt to get battery info by looking at /sys/class/power_supply/BAT0/capacity"""
+    try:
+        return {
+            "charge": int(os.popen("cat /sys/class/power_supply/BAT0/capacity").read().strip())/100,
+            "status": os.popen("cat /sys/class/power_supply/BAT0/status").read()
+        }
+    except:
+        return {
+            "error": "failed to access battery"
+        }
 
 # === HELPERS FOR HYPRCTRL ===
 
@@ -15,13 +32,13 @@ def getMonitors():
         return json.loads(subprocess.check_output(["hyprctl", "monitors", "-j"]))
     except:
         return [
-            #{
-            #    "id": "1",
-            #    "name": "1",
-            #    "activeWorkspace": {
-            #        "id": "1"
-            #    }
-            #}
+            {
+                "name": "⚠",
+                "id": "1",
+                "activeWorkspace": {
+                    "id": "1"
+                }
+            }
         ]
 
 def getWorkspaces():
@@ -29,13 +46,7 @@ def getWorkspaces():
     try:
         return json.loads(subprocess.check_output(["hyprctl", "workspaces", "-j"]))
     except:
-        return [
-            {
-                "name": "test",
-                "monitor": "1",
-                "id": "1",
-            }
-        ]
+        return []
 
 # === HELPERS FOR GTK ===
 
@@ -76,7 +87,8 @@ def setStylesheet(file):
     cssProvider.load_from_path(file)
     screen = Gdk.Screen.get_default()
     styleContext = Gtk.StyleContext()
-    styleContext.add_provider_for_screen(screen, cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER) # With the others GTK_STYLE_PROVIDER_PRIORITY values get the same result.
+    # With the others GTK_STYLE_PROVIDER_PRIORITY values get the same result.
+    styleContext.add_provider_for_screen(screen, cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
 # === HELPERS FOR GTK LAYER SHELL ===
 
