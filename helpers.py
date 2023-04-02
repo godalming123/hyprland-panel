@@ -96,7 +96,7 @@ def windowToLayer(window):
     """Initialises GtkLayerShell for a window."""
     GtkLayerShell.init_for_window(window)
 
-def layeredWindow(title, contents, anchors="", margins="tlbr", layer=GtkLayerShell.Layer.TOP, exclusive=False, monitor=None):
+def layeredWindow(title, contents, anchors="", margins="tlbr", layer=GtkLayerShell.Layer.TOP, exclusive=False, monitor=None, marginSize=5):
     """Creates a window that is a GtkLayerShell layer."""
     window = newWindow(title, contents)
     windowToLayer(window)
@@ -108,10 +108,10 @@ def layeredWindow(title, contents, anchors="", margins="tlbr", layer=GtkLayerShe
     GtkLayerShell.set_anchor(window, GtkLayerShell.Edge.RIGHT,  1 if anchors.__contains__("r") else 0)
 
     # set margins
-    GtkLayerShell.set_margin(window, GtkLayerShell.Edge.BOTTOM, 10 if margins.__contains__("b") else 0)
-    GtkLayerShell.set_margin(window, GtkLayerShell.Edge.TOP,    10 if margins.__contains__("t") else 0)
-    GtkLayerShell.set_margin(window, GtkLayerShell.Edge.LEFT,   10 if margins.__contains__("l") else 0)
-    GtkLayerShell.set_margin(window, GtkLayerShell.Edge.RIGHT,  10 if margins.__contains__("r") else 0)
+    GtkLayerShell.set_margin(window, GtkLayerShell.Edge.BOTTOM, marginSize if margins.__contains__("b") else 0)
+    GtkLayerShell.set_margin(window, GtkLayerShell.Edge.TOP,    marginSize if margins.__contains__("t") else 0)
+    GtkLayerShell.set_margin(window, GtkLayerShell.Edge.LEFT,   marginSize if margins.__contains__("l") else 0)
+    GtkLayerShell.set_margin(window, GtkLayerShell.Edge.RIGHT,  marginSize if margins.__contains__("r") else 0)
 
     # set exclusive zone
     if exclusive:

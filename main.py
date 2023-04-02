@@ -78,10 +78,10 @@ def workspacesWidget(monitorId):
                                 # add it to the text
                                 isActive = (monitor["activeWorkspace"]["id"] == workspace["id"])
                                 if isActive:
-                                    workspacesText += "❱"
+                                    workspacesText += "❱ "
                                 workspacesText += workspace["name"]
                                 if isActive:
-                                    workspacesText += "❰"
+                                    workspacesText += " ❰"
                                 workspacesText += "\n"
             else:
                 for workspace in workspaces:
@@ -117,7 +117,7 @@ def makeBar(monitor, monitorId):
         workspacesWidget(monitorId),
         [timeBtn(lambda _: helpers.toggleWindow(datemenu))] + [batteryStatus[0], batteryStatus[1]] if batteryStatus else []
     )
-    return helpers.layeredWindow("bar", box, "trb", "", GtkLayerShell.Layer.TOP, True, monitor)
+    return helpers.layeredWindow("bar", box, "tlb", "tlbr", GtkLayerShell.Layer.TOP, True, monitor)
 
 bars = []
 
