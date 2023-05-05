@@ -6,6 +6,8 @@ A very WIP bar written in python for hyprland that uses gtk 3 gtk-layer-shell an
  - python
  - python-gobject
  - gtk-layer-shell
+### Running
+ - Run `./main.py`
 
  ## Notes
-  - Updating to gtk4 would be nice since gtk-layer-shell has updated but I think that I will wait a little for distro packages to catch up
+  - Updating to gtk4 would be nice since gtk-layer-shell has updated but I think that I will wait a little for distro packages to catch up (**EDIT:** gtk-layer-shell now supports gtk 4 this is a TODO)
